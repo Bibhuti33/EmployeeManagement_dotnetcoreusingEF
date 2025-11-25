@@ -1,1 +1,63 @@
-# EmployeeManagement_dotnetcoreusingEF
+CREATE DATABASE LeaveManagementDb;
+
+USE LeaveManagementDb;
+
+-- Employee table
+CREATE TABLE Employees (
+    EmployeeId INT IDENTITY(1,1) PRIMARY KEY,
+    EmployeeCode NVARCHAR(20) NOT NULL,
+    FullName NVARCHAR(100) NOT NULL,
+    Email NVARCHAR(100) NULL
+);
+
+
+-- Leave types
+CREATE TABLE LeaveTypes (
+    LeaveTypeId INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(50) NOT NULL,
+    DefaultDays INT NOT NULL
+);
+
+
+-- Leave balance per employee per leave type
+CREATE TABLE LeaveBalances (
+    LeaveBalanceId INT IDENTITY(1,1) PRIMARY KEY,
+    EmployeeId INT NOT NULL FOREIGN KEY REFERENCES Employees(EmployeeId),
+    LeaveTypeId INT NOT NULL FOREIGN KEY REFERENCES LeaveTypes(LeaveTypeId),
+    Balance DECIMAL(5,2) NOT NULL
+);
+
+
+-- Leave applications
+CREATE TABLE LeaveApplications (
+    LeaveApplicationId INT IDENTITY(1,1) PRIMARY KEY,
+    EmployeeId INT NOT NULL FOREIGN KEY REFERENCES Employees(EmployeeId),
+    LeaveTypeId INT NOT NULL FOREIGN KEY REFERENCES LeaveTypes(LeaveTypeId),
+    StartDate DATE NOT NULL,
+    EndDate DATE NOT NULL,
+    Days DECIMAL(5,2) NOT NULL,
+    Reason NVARCHAR(400) NULL,
+    Status NVARCHAR(20) NOT NULL, -- Pending, Approved, Rejected
+    AppliedOn DATETIME NOT NULL DEFAULT GETDATE(),
+    ReviewedBy NVARCHAR(100) NULL,
+    ReviewedOn DATETIME NULL
+);
+
+
+-- Seed sample employees and leave types
+INSERT INTO Employees (EmployeeCode, FullName, Email) VALUES
+('EMP001','Ravi Kumar','ravi@example.com'),
+('EMP002','Sita Sharma','sita@example.com');
+
+INSERT INTO LeaveTypes (Name, DefaultDays) VALUES
+('Casual Leave',12),
+('Sick Leave',10),
+('Earned Leave',18);
+
+-- Seed balances (give each employee the default days)
+INSERT INTO LeaveBalances (EmployeeId, LeaveTypeId, Balance)
+SELECT e.EmployeeId, lt.LeaveTypeId, lt.DefaultDays
+FROM Employees e CROSS JOIN LeaveTypes lt;
+
+
+SELECT * FROM 
