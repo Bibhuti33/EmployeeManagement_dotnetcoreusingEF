@@ -1,0 +1,66 @@
+-- Stored proc: Apply leave (basic checks)
+CREATE PROCEDURE sp_ApplyLeave
+    @EmployeeId INT,
+    @LeaveTypeId INT,
+    @StartDate DATE,
+    @EndDate DATE,
+    @Days DECIMAL(5,2),
+    @Reason NVARCHAR(400)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Basic check: enough balance?
+    DECLARE @bal DECIMAL(5,2);
+    SELECT @bal = Balance FROM LeaveBalances WHERE EmployeeId=@EmployeeId AND LeaveTypeId=@LeaveTypeId;
+
+    IF @bal IS NULL
+    BEGIN
+        RAISERROR('Leave balance not found',16,1);
+        RETURN;
+    END
+
+    IF @bal < @Days
+    BEGIN
+        RAISERROR('Insufficient leave balance',16,1);
+        RETURN;
+    END
+
+    INSERT INTO LeaveApplications (EmployeeId, LeaveTypeId, StartDate, EndDate, Days, Reason, Status)
+    VALUES (@EmployeeId, @LeaveTypeId, @StartDate, @EndDate, @Days, @Reason, 'Pending');
+END
+
+
+
+-- Stored proc: Approve/Reject leave
+CREATE PROCEDURE sp_UpdateLeaveStatus
+    @LeaveApplicationId INT,
+    @Status NVARCHAR(20), -- 'Approved' or 'Rejected'
+    @ReviewedBy NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- If approving, deduct balance
+    IF @Status = 'Approved'
+    BEGIN
+        DECLARE @emp INT, @lt INT, @days DECIMAL(5,2);
+        SELECT @emp = EmployeeId, @lt = LeaveTypeId, @days = Days FROM LeaveApplications WHERE LeaveApplicationId=@LeaveApplicationId;
+
+        IF @emp IS NULL
+        BEGIN
+            RAISERROR('Leave application not found',16,1);
+            RETURN;
+        END
+
+        UPDATE LeaveBalances
+        SET Balance = Balance - @days
+        WHERE EmployeeId=@emp AND LeaveTypeId=@lt;
+    END
+
+    UPDATE LeaveApplications
+    SET Status = @Status,
+        ReviewedBy = @ReviewedBy,
+        ReviewedOn = GETDATE()
+    WHERE LeaveApplicationId=@LeaveApplicationId;
+END
