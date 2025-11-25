@@ -60,4 +60,7 @@ SELECT e.EmployeeId, lt.LeaveTypeId, lt.DefaultDays
 FROM Employees e CROSS JOIN LeaveTypes lt;
 
 
-SELECT * FROM 
+SELECT * FROM Employees
+SELECT * FROM LeaveTypes
+SELECT * FROM LeaveBalances
+SELECT * FROM LeaveApplications
